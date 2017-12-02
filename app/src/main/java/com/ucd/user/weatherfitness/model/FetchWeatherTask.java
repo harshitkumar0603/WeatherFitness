@@ -1,18 +1,23 @@
 package com.ucd.user.weatherfitness.model;
 
+import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.support.v4.view.ViewPager;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.os.Bundle;
 
 import com.ucd.user.weatherfitness.MainActivity;
 import com.ucd.user.weatherfitness.R;
+//import com.ucd.user.weatherfitness.R;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,7 +30,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Locale;
+import com.ucd.user.weatherfitness.ScheduleActivity;
+
 import android.support.v7.app.AppCompatActivity;
+import android.widget.Toast;
 
 /**
  * Created by User on 11/18/2017.
@@ -33,10 +46,24 @@ import android.support.v7.app.AppCompatActivity;
 
 public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
+    private ArrayList<HashMap<String, String>> times;
+    Context context;
+    Activity activity;
+    ListView lv;
+    private ViewPager mViewPager;
+
     TextView scoreID;
+    ListView ListViewID;
+    static String result1[];
+
     public FetchWeatherTask(TextView scoreID){
        this.scoreID = scoreID;
     }
+    public FetchWeatherTask(ListView ListViewID,Activity activity){
+        this.ListViewID = ListViewID;
+        this.activity = activity;
+    }
+
 
     private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
@@ -102,11 +129,13 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
         dayTime = new Time();
 
         String[] resultStrs = new String[numDays];
-        for(int i = 0; i < weatherArray.length(); i++) {
+
+        for(int i = 0; i < numDays; i++) {
             // For now, using the format "Day, description, hi/low"
             String day;
             String description;
             String highAndLow;
+            String dtTime = null;
 
             // Get the JSON object representing the day
             JSONObject dayForecast = weatherArray.getJSONObject(i);
@@ -125,11 +154,33 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
             // Temperatures are in a child object called "temp".  Try not to name variables
             // "temp" when working with temperature.  It confuses everybody.
-            JSONObject temperatureObject = dayForecast.getJSONObject(OWM_TEMPERATURE);
-            double high = temperatureObject.getDouble(OWM_MAX);
-            double low = temperatureObject.getDouble(OWM_MIN);
+            JSONObject temperatureObject;
+            double high;
+            double low;
+
+
+
+            if(ListViewID==null) {
+                temperatureObject = dayForecast.getJSONObject(OWM_TEMPERATURE);
+                high = temperatureObject.getDouble(OWM_MAX);
+                low = temperatureObject.getDouble(OWM_MIN);
+            }
+
+            // if from Schedular
+            else
+
+            {
+                temperatureObject = dayForecast.getJSONObject("main");
+                high = temperatureObject.getDouble("temp_min");
+                low = temperatureObject.getDouble("temp_max");
+                dtTime = dayForecast.getString("dt_txt");
+
+            }
 
             highAndLow = formatHighLows(high, low);
+            if(ListViewID!=null)
+                resultStrs[i] = dtTime + " - " + description + " - " + highAndLow;
+            else
             resultStrs[i] = day + " - " + description + " - " + highAndLow;
         }
 
@@ -186,7 +237,12 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
                     .appendQueryParameter(KEY_PARAM, key)
                     .build();
 
-            URL url = new URL(builtUri.toString());
+            //URL url = new URL(builtUri.toString());
+            URL url;
+            if(ListViewID==null)
+             url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?id=2172797&mode=json&units=metric&cnt=10&APPID=19b104f014c41d11939f615df3a80edf");
+            else
+             url = new URL ("http://api.openweathermap.org/data/2.5/forecast?id=524901&appid=19b104f014c41d11939f615df3a80edf");
 
             Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
@@ -263,10 +319,52 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
     @Override
     protected void onPostExecute(String[] results) {
-        //super.onPostExecute(strings);
+        if(ListViewID!=null) {
+            //super.onPostExecute(strings);
+            Date date = new Date(); // given date
+            java.util.Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
+            calendar.setTime(date); // assigns calendar to given date
+            int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat("E", Locale.ENGLISH);
+            final String strDate = sdf.format(cal.getTime());
+            times = new ArrayList<HashMap<String, String>>();
+            for (int i = 0; i < result1.length; i++) {
+                if (i < 12) {
+                    HashMap<String, String> temp = new HashMap<String, String>();
+                    temp.put("FIRST_COLUMN", results[i].substring(0,19) + ":00AM");
+
+                    temp.put("SECOND_COLUMN", results[i].substring(19));
+                    //else
+                      //  temp.put("SECOND_COLUMN","no data");
+                    times.add(temp);
+                    //times.add(""+i + ":00 AM");
+                } else {
+                    HashMap<String, String> temp = new HashMap<String, String>();
+                    temp.put("FIRST_COLUMN", results[i].substring(0,19) + ":00PM");
+                   // if(result1[i]!=null)
+                        temp.put("SECOND_COLUMN", results[i].substring(19));
+                    //else
+                      //  temp.put("SECOND_COLUMN", "no data");
+                    times.add(temp);
+                    // times.add(""+i + ":00 PM");
+                }
+            }
+
+            ListView lst = ListViewID;
+
+            ListViewAdapter adapter = new ListViewAdapter(activity,times);
+            lst.setAdapter(adapter);
+            lst.setOnItemClickListener(new ItemList());
+
+
+        }
 
         if (results != null) {
             //TextView score_id = (TextView)findViewById(R.id.score_ID);
+            result1 = results;
+            if(ListViewID==null)
             scoreID.setText(results[0]);
             // mForecastAdapter.clear();
             //mForecastAdapter.addAll(result);
@@ -276,4 +374,23 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
         }
     }
 
+    class ItemList implements AdapterView.OnItemClickListener {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            ViewGroup vg = (ViewGroup) view;
+            TextView tv = (TextView) vg.findViewById(R.id.time);
+            Toast.makeText(activity, tv.getText().toString(), Toast.LENGTH_SHORT).show();
+
+            AddEventToCal objEvent = new AddEventToCal(activity,tv.getText().toString());
+            try {
+                objEvent.AddEvent(activity,tv.getText().toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
+        }
+    }
+
 }
+
