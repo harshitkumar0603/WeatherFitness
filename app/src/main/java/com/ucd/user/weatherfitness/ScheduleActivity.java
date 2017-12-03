@@ -228,16 +228,16 @@ public class ScheduleActivity extends AppCompatActivity {
         @Override
         public int getCount() {
             // Show 4 total pages.
-            return 2;
+            return 1;
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
             switch (position) {
                 case 0:
-                    return "Today";
-                case 1:
-                    return "Tomorrow";
+                    return "Schedule Next 10 slots";
+//                case 1:
+//                    return "Tomorrow";
                 /*case 2:
                     return "Wed";
                 case 3:

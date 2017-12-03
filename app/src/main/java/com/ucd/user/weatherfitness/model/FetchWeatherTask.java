@@ -31,6 +31,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -55,6 +56,7 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
     TextView scoreID;
     ListView ListViewID;
     static String result1[];
+    int scoreArray[] = new int[40];
 
     public FetchWeatherTask(TextView scoreID){
        this.scoreID = scoreID;
@@ -157,6 +159,9 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
             JSONObject temperatureObject;
             double high;
             double low;
+            Double wind;
+            Double humid;
+            String precip;
 
 
 
@@ -174,6 +179,16 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
                 high = temperatureObject.getDouble("temp_min");
                 low = temperatureObject.getDouble("temp_max");
                 dtTime = dayForecast.getString("dt_txt");
+                wind = dayForecast.getJSONObject("wind").getDouble("speed");
+                precip = dayForecast.getJSONArray("weather").getJSONObject(0).getString("main");
+                //Score sc = new Score();
+                humid = dayForecast.getJSONObject("main").getDouble("humidity");
+
+                Score score = new Score(description, Math.round(high), Math.round(humid), Math.round(wind));
+                int iscore = score.calculateScore();
+                scoreArray[i] = iscore;
+
+
 
             }
 
@@ -331,25 +346,17 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
             final String strDate = sdf.format(cal.getTime());
             times = new ArrayList<HashMap<String, String>>();
             for (int i = 0; i < result1.length; i++) {
-                if (i < 12) {
+
                     HashMap<String, String> temp = new HashMap<String, String>();
                     temp.put("FIRST_COLUMN", results[i].substring(0,19) + ":00AM");
-
-                    temp.put("SECOND_COLUMN", results[i].substring(19));
+                    int scoredig = scoreArray[i];
+                    String score_col = Integer.toString(scoredig);
+                    temp.put("SECOND_COLUMN",score_col );
                     //else
                       //  temp.put("SECOND_COLUMN","no data");
                     times.add(temp);
                     //times.add(""+i + ":00 AM");
-                } else {
-                    HashMap<String, String> temp = new HashMap<String, String>();
-                    temp.put("FIRST_COLUMN", results[i].substring(0,19) + ":00PM");
-                   // if(result1[i]!=null)
-                        temp.put("SECOND_COLUMN", results[i].substring(19));
-                    //else
-                      //  temp.put("SECOND_COLUMN", "no data");
-                    times.add(temp);
-                    // times.add(""+i + ":00 PM");
-                }
+
             }
 
             ListView lst = ListViewID;
